@@ -34,5 +34,4 @@ Datasets download into the current directory, in a folder like
 `meta.json` (also available as `ds.meta`). Pass `download_path="D:/data"` to choose another
 folder. Asking again for the same options reuses the folder instead of downloading again
 (`force=True` re-downloads).
-The library reads the images.cv catalog. Community-uploaded datasets are not supported yet.
 Dataset licenses vary; `info()["license"]` is "Unknown" when a source has none on file.
