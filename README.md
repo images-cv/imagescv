@@ -13,11 +13,11 @@ day per account).
 import imagescv
 imagescv.login("icv_...")                 # or set IMAGESCV_API_KEY
 
-imagescv.search("cone")                   # [{"name": "traffic_cone", "images": 600, ...}]
-imagescv.info("traffic_cone")             # dataset card: images, classes, license, sources
+imagescv.search("firetruck")              # [{"name": "firetruck", "images": 562, ...}]
+imagescv.info("firetruck")                # dataset card: images, classes, license, sources
 
 ds = imagescv.load(
-    "traffic_cone",
+    "firetruck",
     size="size_128",                      # nochange, size_16, size_32, size_64, size_128, size_256
     color="gray",                         # color or gray
     augmentations=["rotate", "hflip"],    # see imagescv.AUGMENTATIONS
@@ -30,8 +30,9 @@ train = ds.to_torch("train")              # needs: pip install imagescv[torch]
 ```
 
 Datasets download into the current directory, in a folder like
-`traffic_cone_size_128_color_70-20/` that contains `data/train|val|test/<class>/` and
+`firetruck_size_128_color_70-20/` that contains `data/train|val|test/<class>/` and
 `meta.json` (also available as `ds.meta`). Pass `download_path="D:/data"` to choose another
 folder. Asking again for the same options reuses the folder instead of downloading again
 (`force=True` re-downloads).
+The library reads the images.cv catalog. Community-uploaded datasets are not supported yet.
 Dataset licenses vary; `info()["license"]` is "Unknown" when a source has none on file.

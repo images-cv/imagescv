@@ -2,7 +2,7 @@
 
     import imagescv
     imagescv.login("icv_...")          # or set IMAGESCV_API_KEY
-    ds = imagescv.load("traffic_cone")
+    ds = imagescv.load("firetruck")
     print(ds.classes, ds.root)
 """
 from ._version import __version__
