@@ -28,6 +28,8 @@ torch = ["torch", "torchvision"]
 [project.urls]
 Homepage = "https://images.cv"
 Documentation = "https://images.cv/dashboard/api-keys"
+Source = "https://github.com/images-cv/imagescv"
+Issues = "https://github.com/images-cv/imagescv/issues"
 
 [tool.setuptools]
 packages = ["imagescv"]
