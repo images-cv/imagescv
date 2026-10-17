@@ -1,0 +1,17 @@
+__pycache__/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.idea/
+.venv/
+
+# datasets downloaded while trying the library
+*_size_*_*_*/
+*_nochange_*_*/
+
+# local scratch files
+try_it.py
+try_options.py
+starter_ref.ipynb
+try_with_key.py
