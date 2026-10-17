@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "imagescv"
 dynamic = ["version"]
-description = "Download images.cv datasets in one line of Python."
+description = "Download labeled image datasets in one line of Python."
 readme = "README.md"
 requires-python = ">=3.8"
 license = "MIT"
