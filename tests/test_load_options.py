@@ -101,3 +101,14 @@ def test_info_license_logic(monkeypatch):
         {"data": {"sumCounter": 1, "mainCategory": [], "dataSource": ["s"]}} if "items" in p
         else {"data": [{"name": "s", "license_type": ""}]}))
     assert imagescv.info("cat")["license"] == "Unknown"
+
+
+def test_unknown_dataset_gives_friendly_error(monkeypatch, tmp_path):
+    def fake_post(path, body, **k):
+        if path == "/download_images":
+            raise RuntimeError("/download_images failed (404): {'error': 'No dataset named x'}")
+        return {"data": []}
+
+    monkeypatch.setattr(client, "_post", fake_post)
+    with pytest.raises(ValueError, match="No dataset named 'animal_image_classification_dataset'"):
+        imagescv.load("animal_image_classification_dataset", download_path=tmp_path)

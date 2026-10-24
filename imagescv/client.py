@@ -210,6 +210,17 @@ def _safe_extract(zip_path, target):
         z.extractall(target)
 
 
+def _unknown_dataset_message(name):
+    msg = f"No dataset named '{name}' in the images.cv catalog."
+    try:
+        close = [r["name"] for r in search(name.replace("_", " "), limit=5)]
+    except Exception:
+        close = []
+    if close:
+        msg += " Did you mean: " + ", ".join(close) + "?"
+    return msg + " Use imagescv.search() to find the exact name."
+
+
 def load(name, size="size_128", color="color", augmentations=None,
          augmentation_percent=30, split=(0.7, 0.2, 0.1), download_path=None,
          force=False, timeout=1800):
@@ -257,7 +268,12 @@ def load(name, size="size_128", color="color", augmentations=None,
         "link_id": secrets.token_hex(20), "request_type": "CALL_FROM_SEARCH",
         "user_email": [], "user_id": "", "augmentation_percent": int(augmentation_percent),
     }
-    link_id = _post("/download_images", body)["data"].get("link_id")
+    try:
+        link_id = _post("/download_images", body)["data"].get("link_id")
+    except RuntimeError as exc:
+        if "failed (404)" in str(exc):
+            raise ValueError(_unknown_dataset_message(name)) from exc
+        raise
     if not link_id:
         raise RuntimeError("The server did not accept the download job")
     url = _wait_for_url(link_id, timeout)
