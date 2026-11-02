@@ -107,6 +107,8 @@ def test_unknown_dataset_gives_friendly_error(monkeypatch, tmp_path):
     def fake_post(path, body, **k):
         if path == "/download_images":
             raise RuntimeError("/download_images failed (404): {'error': 'No dataset named x'}")
+        if path == "/create_hosted_dataset_download":
+            raise RuntimeError("/create_hosted_dataset_download failed (400): {'error': 'Dataset not found'}")
         return {"data": []}
 
     monkeypatch.setattr(client, "_post", fake_post)

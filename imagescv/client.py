@@ -164,6 +164,19 @@ def search(query, min_images=-1, limit=50):
         key = s.get("main_category") if isinstance(s, dict) else None
         if key and key not in found:
             found[key] = {"name": key, "images": None, "parent": s.get("parent")}
+    for row in found.values():
+        row["community"] = False
+    # Community datasets (uploaded by users, moderated) live in a separate index.
+    try:
+        community = _post("/search_community_datasets", {"q": q, "limit": 12}).get("data") or []
+    except RuntimeError:
+        community = []  # a community lookup problem must never break catalog search
+    for it in community:
+        key = it.get("data_key")
+        if not key or key in found or not it.get("hosted"):
+            continue  # only datasets that can be downloaded; the catalog wins a name clash
+        found[key] = {"name": key, "images": it.get("image_count"), "parent": it.get("main_label"),
+                      "community": True, "title": it.get("title")}
     rows = sorted(found.values(), key=lambda r: (-(r["images"] or 0), r["name"]))
     return rows[:limit]
 
@@ -221,6 +234,37 @@ def _unknown_dataset_message(name):
     return msg + " Use imagescv.search() to find the exact name."
 
 
+def _community_url(name, size, color, augs, augmentation_percent, split, timeout, poll=3.0):
+    """Start a configured download of a community dataset and wait for its ZIP url.
+    Returns None when no approved, downloadable community dataset has this name."""
+    if size == "size_16":
+        raise ValueError("Community datasets support these sizes: nochange, size_32, size_64, "
+                         "size_128, size_256 (size_16 is catalog-only).")
+    options = {"output_size": size, "color_type": color, "split_set": list(split),
+               "augmentations": {a: True for a in augs}, "augmentation_percent": int(augmentation_percent)}
+    try:
+        download_id = _post("/create_hosted_dataset_download",
+                            {"data_key": name, "options": options})["data"]["download_id"]
+    except RuntimeError as exc:
+        if "Dataset not found" in str(exc):
+            return None
+        raise
+    deadline = time.monotonic() + timeout
+    with tqdm(total=timeout, unit="s", desc="Preparing package") as bar:
+        while time.monotonic() < deadline:
+            st = _post("/get_hosted_dataset_download_status", {"download_id": download_id})["data"]
+            if st.get("status") == "READY" and st.get("url"):
+                bar.n = bar.total
+                bar.refresh()
+                return st["url"]
+            if st.get("status") == "FAILED":
+                raise RuntimeError(f"Community dataset package failed: {st.get('error') or 'unknown error'}")
+            time.sleep(poll)
+            bar.update(poll)
+    raise RuntimeError(f"Package was not ready after {timeout}s (job id {download_id}). "
+                       "Try load(..., timeout=1800).")
+
+
 def load(name, size="size_128", color="color", augmentations=None,
          augmentation_percent=30, split=(0.7, 0.2, 0.1), download_path=None,
          force=False, timeout=1800):
@@ -268,15 +312,19 @@ def load(name, size="size_128", color="color", augmentations=None,
         "link_id": secrets.token_hex(20), "request_type": "CALL_FROM_SEARCH",
         "user_email": [], "user_id": "", "augmentation_percent": int(augmentation_percent),
     }
+    url = None
     try:
         link_id = _post("/download_images", body)["data"].get("link_id")
+        if not link_id:
+            raise RuntimeError("The server did not accept the download job")
+        url = _wait_for_url(link_id, timeout)
     except RuntimeError as exc:
-        if "failed (404)" in str(exc):
+        if "failed (404)" not in str(exc):
+            raise
+        # Not in the catalog: it may be a community dataset (the name is its data_key).
+        url = _community_url(name, size, color, augs, augmentation_percent, split, timeout)
+        if url is None:
             raise ValueError(_unknown_dataset_message(name)) from exc
-        raise
-    if not link_id:
-        raise RuntimeError("The server did not accept the download job")
-    url = _wait_for_url(link_id, timeout)
     zip_path = folder / "package.zip"
     _stream(url, zip_path)
     staging = folder / ".extract"
